@@ -284,13 +284,54 @@ sns.boxplot(x='time_of_day', y='age', hue='time_of_day', data=data, palette='Set
 ax.set_title('Độ tuổi theo thời gian trong ngày')
 plt.xticks(rotation=45)
 st.pyplot(fig)
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, RocCurveDisplay
 
-# Thêm thông tin liên hệ
-st.markdown("""
-    <hr>
-    <h3 style='text-align: center;'>Liên hệ</h3>
-    <p style='text-align: center;'>Nếu bạn cần thêm thông tin hoặc có câu hỏi, vui lòng liên hệ với chúng tôi:</p>
-    <p style='text-align: center;'>Email: <a href='mailto:hoang.nguyenhuy2024ll@hcmut.edu.vn'>hoang.nguyenhuy2024ll@hcmut.edu.vn</a></p>
-    <p style='text-align: center;'>Số điện thoại: 0393 875 279</p>
-    <p style='text-align: center;'>Địa chỉ: 83 Đường Tô Ký, Thành phố Hồ Chí Minh, Việt Nam</p>
-    """, unsafe_allow_html=True)
+# Prepare the data
+X = data.drop('click', axis=1)  # Use all variables except the target
+y = data['click']
+
+# Handle categorical variables
+categorical_cols = X.select_dtypes(include=['object', 'category']).columns
+X = pd.get_dummies(X, columns=categorical_cols, drop_first=True)
+
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train logistic regression model
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train, y_train)
+
+# Predict on the test set
+y_pred = model.predict(X_test)
+
+# Generate confusion matrix
+cm = confusion_matrix(y_test, y_pred)
+
+# Plot confusion matrix
+fig_cm, ax_cm = plt.subplots()
+disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+disp.plot(ax=ax_cm)
+ax_cm.set_title('Confusion Matrix')
+st.pyplot(fig_cm)
+
+# Plot ROC curve
+fig_roc, ax_roc = plt.subplots()
+RocCurveDisplay.from_estimator(model, X_test, y_test, ax=ax_roc)
+ax_roc.set_title('ROC Curve')
+st.pyplot(fig_roc)
+
+# Display model coefficients as a bar chart
+coefficients = pd.DataFrame({
+    'Feature': X.columns,
+    'Coefficient': model.coef_[0]
+})
+coefficients = coefficients.sort_values(by='Coefficient')
+
+fig_coef, ax_coef = plt.subplots(figsize=(8, len(coefficients) / 2))
+sns.barplot(x='Coefficient', y='Feature', data=coefficients, ax=ax_coef)
+ax_coef.set_title('Model Coefficients')
+st.pyplot(fig_coef)
+
